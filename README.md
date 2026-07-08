@@ -16,6 +16,16 @@ For runnable code demonstrating the same patterns, see my public repos linked be
   secrets in SSM, daily S3 backups, and a zero-touch continuous-deployment pipeline.
   *I own the DevOps/infrastructure track and debugged real production outages on it.*
 
+- **[Kubernetes + Helm for a multi-service SaaS](docs/kubernetes-helm-saas.md)** —
+  containerized several services (API, workers, web) into one Helm chart with
+  per-environment values, a commit-SHA image pipeline, Ingress/TLS, and HPA.
+  Deploy or update the whole platform with a single `helm upgrade --install`.
+
+- **[CI/CD + secrets hardening for an app backend](docs/cicd-and-secrets-hardening.md)** —
+  GitHub Actions CI on every change, safe continuous deployment on merge, and a
+  security pass: AES-256-GCM encryption of access tokens at rest and CSPRNG
+  session IDs.
+
 ---
 
 ## What these demonstrate
