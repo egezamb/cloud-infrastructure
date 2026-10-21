@@ -69,7 +69,7 @@ SSM SecureString parameters, and a budget alarm.
 
 ## Outcome
 
-A live service on a custom domain with automatic HTTPS, running at roughly the
+A service on a custom domain with automatic HTTPS, running at roughly the
 cost of a single small instance, with **daily off-box backups** and
 **zero-touch deploys**. Data survives instance replacement by design.
 
