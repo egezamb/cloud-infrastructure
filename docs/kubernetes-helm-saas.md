@@ -6,9 +6,9 @@
 
 ## Context
 
-A B2B SaaS platform made of several services (an API, background workers, and a
-web frontend) needed **reproducible deployments** that behaved the same across
-environments — no more hand-edited manifests drifting between dev and prod. I own
+A B2B SaaS platform made of several services (an API, a Celery worker, a web
+frontend, PostgreSQL and Redis) needed **reproducible deployments** instead of
+hand-edited manifests. I own
 the **DevOps track**: containerizing the services, packaging them as a **Helm
 chart**, and wiring the image build pipeline and CI.
 
@@ -16,54 +16,54 @@ chart**, and wiring the image build pipeline and CI.
 
 ```
    Git push ──► CI (GitHub Actions)
-                 │  build + test
-                 │  docker build → push (tagged by commit)
+                 │  build + test + scan
+                 │  docker build → push (tagged by commit SHA)
                  ▼
           Container registry
                  │
                  ▼
       Helm chart  ──►  Kubernetes cluster
-        (one chart,        ├─ Deployment: api        (+ HPA)
-         per-env values)   ├─ Deployment: worker
+       (one chart,         ├─ Deployment: api
+        values.yaml)       ├─ Deployment: worker
                            ├─ Deployment: web
-                           ├─ Service + Ingress (TLS)
+                           ├─ Deployment: redis
+                           ├─ StatefulSet: postgres
+                           ├─ Services + Ingress (/api → api, / → web)
                            ├─ ConfigMap (non-secret config)
                            └─ Secret (injected env)
 ```
 
-One Helm chart templates every service; a small `values-<env>.yaml` per
-environment supplies image tags, replica counts, resource limits, and hostnames.
-Deploying an environment is one `helm upgrade --install`.
+One Helm chart templates every service; `values.yaml` supplies image tags,
+replica counts, resource limits, and the hostname.
+Deploying the platform is one `helm upgrade --install`.
 
 ## Key decisions (and why)
 
 | Decision | Why |
 |---|---|
-| **One Helm chart, per-environment values files** | Dev and prod deploy from the *same* templates — environment parity, no drift, no copy-pasted YAML. |
+| **One Helm chart for every service** | All services deploy from the *same* templates and helpers — no copy-pasted YAML. |
 | **Images tagged by commit SHA** (not `latest`) | Every deploy is traceable to an exact commit; rollbacks are deterministic. |
-| **Resource requests/limits + HPA on the API** | The API scales on load; requests/limits keep one service from starving the node. |
+| **Resource requests/limits from values** | Requests/limits keep one service from starving the node. |
 | **Config split: ConfigMap vs Secret** | Non-secret settings are visible/reviewable; secrets are injected separately and never committed. |
-| **Ingress with TLS termination** | Single managed entry point, HTTPS by default, host-based routing to services. |
+| **One Ingress for the platform** | Single entry point: `/api` goes to the API, everything else to the web app. |
 
 ## My role
 
-- Wrote the Helm chart from scratch — templates, `_helpers.tpl`, values schema,
-  and per-environment overrides.
-- Built the **Docker image pipeline** (multi-stage builds, commit-SHA tags) and
-  the GitHub Actions CI that produces and pushes them.
-- Set up the Deployment/Service/Ingress/HPA topology and the ConfigMap/Secret
-  separation.
+- Wrote the Helm chart — templates, `_helpers.tpl` and values.
+- Built the **Docker image pipeline** (commit-SHA tags, image scan before push)
+  and the GitHub Actions CI that produces and pushes them.
+- Set up the Deployment/StatefulSet/Service/Ingress topology and the
+  ConfigMap/Secret separation.
 
 ## Outcome
 
-A single `helm upgrade --install` deploys or updates the whole platform for a
-given environment, from images built and tagged automatically by CI — repeatable,
-traceable, and identical across environments.
+A single `helm upgrade --install` deploys or updates the whole platform from
+images built and tagged automatically by CI — repeatable and traceable.
 
 ## Tech
 
 `Kubernetes` · `Helm` · `Docker (multi-stage)` · `GitHub Actions` ·
-`Ingress / TLS` · `HPA`
+`Ingress`
 
 ---
 
